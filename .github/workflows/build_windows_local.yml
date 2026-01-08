@@ -1,0 +1,53 @@
+name: Build Windows Local
+
+on:
+  push:
+  #   branches: [ main ]
+  # pull_request:
+  #   branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    name: Build Windows (release)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from pubspec.yaml
+        shell: pwsh
+        run: |
+          $versionLine = Select-String '^version: ' pubspec.yaml | Select-Object -First 1
+          if ($versionLine) {
+            $version = ($versionLine -split ' ')[1].Trim()
+            echo "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          flutter --version
+          flutter pub get
+
+      - name: Generate translation files
+        shell: pwsh
+        run: |
+          flutter pub global activate intl_utils
+          flutter pub global run intl_utils:generate
+
+      - name: Run flutter doctor
+        run: flutter doctor -v
+
+      - name: Build Windows (release)
+        run: flutter build windows --release
+
+      - name: Upload Windows release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: swift_control-windows-release
+          path: build/windows/x64/runner/Release/**
