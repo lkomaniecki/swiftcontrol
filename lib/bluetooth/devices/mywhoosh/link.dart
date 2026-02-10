@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:bike_control/bluetooth/devices/trainer_connection.dart';
-import 'package:bike_control/bluetooth/devices/zwift/protocol/zp.pb.dart';
 import 'package:bike_control/bluetooth/messages/notification.dart';
 import 'package:bike_control/gen/l10n.dart';
 import 'package:bike_control/utils/actions/base_actions.dart';
@@ -11,14 +10,17 @@ import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:bike_control/utils/keymap/keymap.dart';
 import 'package:bike_control/utils/requirements/multi.dart';
 import 'package:flutter/foundation.dart';
+import 'package:prop/prop.dart';
 
 class WhooshLink extends TrainerConnection {
   Socket? _socket;
   ServerSocket? _server;
 
+  static const String connectionTitle = 'MyWhoosh Link';
+
   WhooshLink()
     : super(
-        title: 'MyWhoosh Link',
+        title: connectionTitle,
         supportedActions: [
           InGameAction.shiftUp,
           InGameAction.shiftDown,
@@ -64,7 +66,8 @@ class WhooshLink extends TrainerConnection {
 
     // Accept connection
     _server!.listen(
-      (Socket socket) {
+      (Socket socket) async {
+        await SharedLogic.keepAlive();
         _socket = socket;
         core.connection.signalNotification(
           AlertNotification(LogLevel.LOGLEVEL_INFO, AppLocalizations.current.myWhooshLinkConnected),
@@ -87,6 +90,8 @@ class WhooshLink extends TrainerConnection {
           },
           onDone: () {
             print('Client disconnected: $socket');
+
+            SharedLogic.stopKeepAlive();
             isConnected.value = false;
             core.connection.signalNotification(
               AlertNotification(LogLevel.LOGLEVEL_WARNING, 'MyWhoosh Link disconnected'),

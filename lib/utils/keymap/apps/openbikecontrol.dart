@@ -6,11 +6,11 @@ import '../keymap.dart';
 class OpenBikeControl extends SupportedApp {
   OpenBikeControl()
     : super(
-        name: 'OpenBikeControl compatible app',
+        name: 'OpenBikeControl Compatible',
         packageName: "org.openbikecontrol",
         compatibleTargets: Target.values,
         supportsZwiftEmulation: false,
-        supportsOpenBikeProtocol: true,
+        supportsOpenBikeProtocol: [OpenBikeProtocolSupport.network, OpenBikeProtocolSupport.ble],
         keymap: Keymap(
           keyPairs: [],
         ),

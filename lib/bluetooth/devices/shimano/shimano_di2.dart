@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:bike_control/utils/core.dart';
-import 'package:bike_control/utils/keymap/apps/custom_app.dart';
 import 'package:bike_control/utils/keymap/buttons.dart';
 import 'package:dartx/dartx.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,7 @@ import 'package:universal_ble/universal_ble.dart';
 import '../bluetooth_device.dart';
 
 class ShimanoDi2 extends BluetoothDevice {
-  ShimanoDi2(super.scanResult) : super(availableButtons: []);
+  ShimanoDi2(super.scanResult) : super(availableButtons: [], buttonPrefix: 'D-Fly Channel ');
 
   @override
   Future<void> handleServices(List<BleService> services) async {
@@ -30,7 +29,10 @@ class ShimanoDi2 extends BluetoothDevice {
   bool _isInitialized = false;
 
   @override
-  Future<void> processCharacteristic(String characteristic, Uint8List bytes) {
+  String get buttonExplanation => 'Click a D-Fly button to configure them.';
+
+  @override
+  Future<void> processCharacteristic(String characteristic, Uint8List bytes) async {
     if (characteristic.toLowerCase() == ShimanoDi2Constants.D_FLY_CHANNEL_UUID) {
       final channels = bytes.sublist(1);
 
@@ -42,7 +44,7 @@ class ShimanoDi2 extends BluetoothDevice {
 
           getOrAddButton(
             'D-Fly Channel $readableIndex',
-            () => ControllerButton('D-Fly Channel $readableIndex'),
+            () => ControllerButton('D-Fly Channel $readableIndex', sourceDeviceId: device.deviceId),
           );
         });
         _isInitialized = true;
@@ -59,7 +61,7 @@ class ShimanoDi2 extends BluetoothDevice {
 
         final button = getOrAddButton(
           'D-Fly Channel $readableIndex',
-          () => ControllerButton('D-Fly Channel $readableIndex'),
+          () => ControllerButton('D-Fly Channel $readableIndex', sourceDeviceId: device.deviceId),
         );
         if (didChange) {
           clickedButtons.add(button);
@@ -67,8 +69,7 @@ class ShimanoDi2 extends BluetoothDevice {
       });
 
       if (clickedButtons.isNotEmpty) {
-        handleButtonsClicked(clickedButtons);
-        handleButtonsClicked([]);
+        await handleButtonsClickedWithoutLongPressSupport(clickedButtons);
       }
     }
     return Future.value();
@@ -80,13 +81,9 @@ class ShimanoDi2 extends BluetoothDevice {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         super.showInformation(context),
-        Text(
-          'Make sure to set your Di2 buttons to D-Fly channels in the Shimano E-TUBE app.',
-          style: TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-        if (core.actionHandler.supportedApp is! CustomApp)
+        if (!core.settings.getShowOnboarding())
           Text(
-            'Use a custom keymap to support ${scanResult.name}',
+            'Make sure to set your Di2 buttons to D-Fly channels in the Shimano E-TUBE app.',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
       ],
